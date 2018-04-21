@@ -35,27 +35,35 @@ func schedule(jobName string, mapFiles []string, nReduce int, phase jobPhase, re
 	// Your code here (Part III, Part IV).
 	//
 
-	waitAndDone := func(wa string, t DoTaskArgs, done *int32) {
-		call(wa, "Worker.DoTask", t, nil)
-		atomic.AddInt32(done, 1)
-		registerChan<-wa
-	}
+	// generate task channel
+	// the better way is make a fix size channel and push task asyncronously
+	tasks := make(chan DoTaskArgs, 16)
+	defer close(tasks)
+	go func() {
+		for i := 0; i < ntasks; i++ {
+			tasks <- DoTaskArgs{jobName, mapFiles[i], phase, i, n_other}
+		}
+	}()
 
-	// generate task sequence
-	tasks := make([]DoTaskArgs, 0, ntasks)
-	for i := 0; i < ntasks; i++ {
-		tasks = append(tasks, DoTaskArgs{jobName, mapFiles[i], phase, i, n_other})
-	}
-	var done int32
-	for done = 0; len(tasks) > 0; {
-		if workerAddress, ok := <-registerChan; ok {
-			task := tasks[0]
-			tasks = tasks[1:]
-			go waitAndDone(workerAddress, task, &done)
-		} else {
-			fmt.Printf("registerChan closed too early\n")
+	// handle worker registe
+	timeout := time.NewTimer(time.Second)
+	for done := int32(0); done < int32(ntasks); {
+		timeout.Reset(time.Second)
+		select{
+		case workerAddress := <-registerChan:
+			go func() {
+				for ok := true; ok; {
+					if task, ok := <- tasks; ok {
+						if call(workerAddress, "Worker.DoTask", task, nil) {
+							atomic.AddInt32(&done, 1)
+						} else {
+							tasks <- task
+						}
+					}
+				}
+			}()
+		case <-timeout.C:
 		}
 	}
-	for ; done < int32(ntasks); {time.Sleep(1000 * time.Millisecond)}
 	fmt.Printf("Schedule: %v done\n", phase)
 }
