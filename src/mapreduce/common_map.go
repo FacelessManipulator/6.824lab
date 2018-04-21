@@ -2,7 +2,16 @@ package mapreduce
 
 import (
 	"hash/fnv"
+	"io/ioutil"
+	"os"
+	// "encoding/json"
 )
+
+func passOrPanic(errno error) {
+	if errno != nil {
+		panic(errno)
+	}
+}
 
 func doMap(
 	jobName string, // the name of the MapReduce job
@@ -53,6 +62,27 @@ func doMap(
 	//
 	// Your code here (Part I).
 	//
+
+	// read the input file
+	input, err := ioutil.ReadFile(inFile)
+	passOrPanic(err)
+
+	// exec mapF
+	kvs := mapF(inFile, string(input))
+
+	// write into intermediate file
+	opened := make(map[int] *os.File)
+	for _, kv := range kvs {
+		r := ihash(kv.Key) % nReduce
+		if _, ok := opened[r]; !ok{
+			opened[r], err = os.Create(reduceName(jobName, mapTask, r))
+			defer opened[r].Close()
+			passOrPanic(err)
+		}
+		// b, _ := json.Marshal(kv)
+		b := encode(kv)
+		opened[r].Write(b)
+	}
 }
 
 func ihash(s string) int {

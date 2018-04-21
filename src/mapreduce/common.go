@@ -3,6 +3,10 @@ package mapreduce
 import (
 	"fmt"
 	"strconv"
+	"strings"
+	"errors"
+	"bytes"
+	"io"
 )
 
 // Debugging enabled?
@@ -29,6 +33,28 @@ const (
 type KeyValue struct {
 	Key   string
 	Value string
+}
+
+func encode(kv KeyValue) []byte{
+	if strings.ContainsRune(kv.Key, 0) ||
+		strings.ContainsRune(kv.Value, 0) {
+			panic(errors.New("Assume KeyValue did not contains \\x00"))
+	}
+	return []byte(kv.Key + "\x00" + kv.Value + "\x00")
+}
+
+func decode(blob []byte, kv chan KeyValue){
+	defer close(kv)
+	buf := bytes.NewBuffer(blob)
+	for {
+		key, _ := buf.ReadBytes(0)
+		value, err := buf.ReadBytes(0)
+		if err == io.EOF {
+			break
+		} else {
+			kv <- KeyValue{string(key[:len(key)-1]), string(value[:len(value)-1])}
+		}
+	}
 }
 
 // reduceName constructs the name of the intermediate file which map task

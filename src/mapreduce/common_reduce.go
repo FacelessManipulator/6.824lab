@@ -1,5 +1,13 @@
 package mapreduce
 
+import (
+	"encoding/json"
+	// "bytes"
+	"io/ioutil"
+	// "io"
+	"os"
+)
+
 func doReduce(
 	jobName string, // the name of the whole MapReduce job
 	reduceTask int, // which reduce task this is
@@ -44,4 +52,47 @@ func doReduce(
 	//
 	// Your code here (Part I).
 	//
+
+	// inputs = make([nMap][]byte)
+	kvs := make(map[string][]string)
+	for m := 0; m < nMap; m++ {
+		input, err := ioutil.ReadFile(reduceName(jobName, m, reduceTask))
+		passOrPanic(err)
+		// concentrate
+		// dec := json.NewDecoder(bytes.NewReader(input))
+		kvc := make(chan KeyValue)
+		go decode(input, kvc)
+		var kv KeyValue
+		for ok := true; ok; {
+			if kv, ok = <- kvc; ok {
+				if v, ok2 := kvs[kv.Key]; ok2 {
+					kvs[kv.Key] = append(v, kv.Value)
+				} else {
+					kvs[kv.Key] = []string{kv.Value}
+				}
+			}
+			// var kv KeyValue
+			// if err := dec.Decode(&kv); err == io.EOF {
+			// 	break
+			// } else if err != nil {
+			// 	panic(err)
+			// }
+
+			// if v, ok := kvs[kv.Key]; ok {
+			// 	kvs[kv.Key] = append(v, kv.Value)
+			// } else {
+			// 	kvs[kv.Key] = []string{kv.Value}
+			// }
+		}
+	}
+
+	// reduce and write output
+	output, err := os.Create(outFile)
+	defer output.Close()
+	passOrPanic(err)
+	for k, v := range kvs {
+		red := reduceF(k ,v)
+		b, _ := json.Marshal(KeyValue{k, red})
+		output.Write(b)
+	}
 }

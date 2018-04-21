@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"mapreduce"
 	"os"
+	"regexp"
+	"strconv"
 )
 
 //
@@ -15,6 +17,13 @@ import (
 //
 func mapF(filename string, contents string) []mapreduce.KeyValue {
 	// Your code here (Part II).
+	var kvs []mapreduce.KeyValue
+	re := regexp.MustCompile("[a-zA-Z]+")
+	words := re.FindAllString(contents, -1)
+	for _, w := range words {
+		kvs = append(kvs, mapreduce.KeyValue{w, ""})
+	}
+	return kvs
 }
 
 //
@@ -24,6 +33,7 @@ func mapF(filename string, contents string) []mapreduce.KeyValue {
 //
 func reduceF(key string, values []string) string {
 	// Your code here (Part II).
+	return strconv.Itoa(len(values))
 }
 
 // Can be run in 3 ways:
