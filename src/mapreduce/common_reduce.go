@@ -71,18 +71,6 @@ func doReduce(
 					kvs[kv.Key] = []string{kv.Value}
 				}
 			}
-			// var kv KeyValue
-			// if err := dec.Decode(&kv); err == io.EOF {
-			// 	break
-			// } else if err != nil {
-			// 	panic(err)
-			// }
-
-			// if v, ok := kvs[kv.Key]; ok {
-			// 	kvs[kv.Key] = append(v, kv.Value)
-			// } else {
-			// 	kvs[kv.Key] = []string{kv.Value}
-			// }
 		}
 	}
 
