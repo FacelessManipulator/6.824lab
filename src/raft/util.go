@@ -11,3 +11,11 @@ func DPrintf(format string, a ...interface{}) (n int, err error) {
 	}
 	return
 }
+
+func max(x int, y int) (int) {
+	if x >= y {
+		return x
+	} else {
+		return y
+	}
+}
