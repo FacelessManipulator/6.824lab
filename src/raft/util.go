@@ -1,6 +1,7 @@
 package raft
 
 import "log"
+import "time"
 // Debugging
 const Debug = 0
 
@@ -36,6 +37,13 @@ func mins(xs []int) (int) {
 	return minv
 }
 
+func signalTimeout(ch chan int, timeout time.Duration) {
+	select {
+	case <-time.After(timeout):
+	case ch<-1:
+	}
+}
+
 func counts(xs []int, f func(x int) bool) int {
 	count := 0
 	for i:=0; i<len(xs); i++ {
@@ -45,3 +53,11 @@ func counts(xs []int, f func(x int) bool) int {
 	}
 	return count
 }
+
+const (
+	SUCCESS	int  = iota
+	CANDIDATE_TIMEOUT	
+	FOLLOWER_TIMEOUT
+	LEADER_TIMEOUT
+	RESET	
+)
